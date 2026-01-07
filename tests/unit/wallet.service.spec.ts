@@ -1,11 +1,9 @@
-// src/tests/unit/wallet.service.spec.ts
 jest.mock('uuid', () => ({
   v4: () => 'mock-uuid-123'
 }));
 
 import { FundWalletInput, TransferFundsInput, WithdrawFundsInput,  } from "../../src/modules/wallet/types/wallet-transactions-input.types";
 import { WalletService } from "../../src/modules/wallet/wallet.service";
-import { Knex } from "knex";
 
 describe("WalletService", () => {
   let walletService: WalletService;
@@ -37,7 +35,7 @@ describe("WalletService", () => {
     };
 
   db = jest.fn(() => queryBuilder);
-  trx = jest.fn(() => trx_builder)
+  trx = jest.fn(() => trx_builder);
   db.transaction = jest.fn(async (cb) => cb(trx));
 
     walletService = new WalletService(db as any);
@@ -49,7 +47,6 @@ describe("WalletService", () => {
   // -------------------
   describe("createWallet", () => {
     it("should create a wallet for a valid user ID", async () => {
-      // Implement test logic later
       await expect(walletService.createWallet("user-uuid")).resolves.not.toThrow();
     });
 

@@ -34,7 +34,7 @@ export class WalletService {
                 throw new Error("User already has an Active wallet")
             }
             console.error('Wallet Creation Error:', error)
-            throw new Error("An unexpected error occured during wallet creation")
+            throw error
         }
     })
   }

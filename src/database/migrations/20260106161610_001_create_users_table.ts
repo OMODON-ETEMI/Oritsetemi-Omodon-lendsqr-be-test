@@ -1,5 +1,4 @@
 import type { Knex } from "knex";
-import { table } from "node:console";
 
 
 export async function up(knex: Knex): Promise<void> {
