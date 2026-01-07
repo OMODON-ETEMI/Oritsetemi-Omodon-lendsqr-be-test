@@ -3,7 +3,7 @@ import type { Knex } from "knex";
 
 export async function up(knex: Knex): Promise<void> {
     await knex.schema.createTable('wallet_transactions', (table) => {
-        table.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+        table.uuid('id').primary();
         table.uuid('wallet_id').notNullable().references('id').inTable('wallets').onDelete('CASCADE');
         table.uuid('related_wallet_id').nullable().references('id').inTable('wallets').onDelete('CASCADE');
         table.string('type', 50).notNullable();

@@ -3,7 +3,7 @@ import type { Knex } from "knex";
 
 export async function up(knex: Knex): Promise<void> {
     await knex.schema.createTable('wallets', (table) => {
-        table.uuid('id').primary().defaultTo(knex.raw('(UUID())'));
+        table.uuid('id').primary();
         table.uuid('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE').unique();
         table.decimal('balance', 15, 2).notNullable().defaultTo(0);
         table.check('balance >= 0', [], 'chk_wallet_positive_balance');
