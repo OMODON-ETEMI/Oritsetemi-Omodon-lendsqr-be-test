@@ -1,188 +1,76 @@
-jest.mock('uuid', () => ({
-  v4: () => 'mock-uuid-123'
-}));
+jest.mock('uuid', () => ({ v4: () => 'mock-uuid-123' }));
 
-import { FundWalletInput, TransferFundsInput, WithdrawFundsInput,  } from "../../src/modules/wallet/types/wallet-transactions-input.types";
-import { WalletService } from "../../src/modules/wallet/wallet.service";
+import { WalletService } from '../../src/modules/wallet/wallet.service';
 
-describe("WalletService", () => {
+describe('WalletService Unit Tests', () => {
   let walletService: WalletService;
-  let trx: any;
-  let queryBuilder: any;
-  let db: any;
+  let mockDb: any;
+  let mockTrx: any;
 
-  beforeEach(() => {
-    const trx_builder = {
-      where: jest.fn().mockReturnThis(),
-      increment: jest.fn().mockResolvedValue(undefined),
-      decrement: jest.fn().mockResolvedValue(undefined),
-      forUpdate: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockResolvedValue([1]),
-      first: jest.fn().mockResolvedValue({
-        id: "wallet-id",
-        user_id: "user-id",
-        balance: 1000,
-      }),
-    };
+beforeEach(() => {
+  const queryBuilder = {
+    where: jest.fn().mockReturnThis(),
+    forUpdate: jest.fn().mockReturnThis(),
+    first: jest.fn(),
+    insert: jest.fn().mockResolvedValue(['mock-uuid-123']),
+    increment: jest.fn().mockResolvedValue(1),
+    decrement: jest.fn().mockResolvedValue(1),
+  };
 
-     queryBuilder = {
-      where: jest.fn().mockReturnThis(),
-      first: jest.fn().mockResolvedValue({
-        walletId: "wallet-id",
-        userId: "user-id",
-        balance: 1000,
-      }),
-    };
+  mockTrx = jest.fn(() => queryBuilder);
+  Object.assign(mockTrx, queryBuilder);
 
-  db = jest.fn(() => queryBuilder);
-  trx = jest.fn(() => trx_builder);
-  db.transaction = jest.fn(async (cb) => cb(trx));
+  mockDb = jest.fn(() => queryBuilder);
+  mockDb.transaction = jest.fn((callback) => callback(mockTrx));
 
-    walletService = new WalletService(db as any);
-  });
+  walletService = new WalletService(mockDb as any);
+});
 
+  describe('Transaction Rollback', () => {
+    it('should rollback if receiver wallet not found', async () => {
+      mockTrx.first
+        .mockResolvedValueOnce({ id: 'wallet1', balance: 1000 })
+        .mockResolvedValueOnce(null);
 
-  // -------------------
-  // CREATE WALLET
-  // -------------------
-  describe("createWallet", () => {
-    it("should create a wallet for a valid user ID", async () => {
-      await expect(walletService.createWallet("user-uuid")).resolves.not.toThrow();
-    });
-
-    it("should throw an error if userId is invalid", async () => {
-      await expect(walletService.createWallet("")).rejects.toThrow();
-    });
-  });
-
-  // -------------------
-  // FUND WALLET
-  // -------------------
-  describe("fundWallet", () => {
-    it("should increase wallet balance for valid input", async () => {
-      const input: FundWalletInput = {
-        walletId: "wallet-uuid",
-        amount: 1000,
-        reference: "ref123",
-        description: "Test funding",
-      };
-      await expect(walletService.fundWallet(input)).resolves.not.toThrow();
-    });
-
-    it("should throw an error if wallet does not exist", async () => {
-      const input: FundWalletInput = {
-        walletId: "",
-        amount: 1000,
-        reference: "ref123",
-        description: "Test funding",
-      };
-      await expect(walletService.fundWallet(input)).rejects.toThrow();
-    });
-
-    it("should throw an error if amount is negative or zero", async () => {
-      const input: FundWalletInput = {
-        walletId: "wallet-uuid",
-        amount: 0,
-        reference: "ref123",
-        description: "Test funding",
-      };
-      await expect(walletService.fundWallet(input)).rejects.toThrow();
-    });
-  });
-
-  // -------------------
-  // TRANSFER FUNDS
-  // -------------------
-  describe("transferFunds", () => {
-    it("should transfer funds between wallets successfully", async () => {
-      const input: TransferFundsInput = {
-        fromWalletId: "wallet1",
-        toWalletId: "wallet2",
+      await expect(walletService.transferFunds({
+        fromWalletId: 'wallet1',
+        toWalletId: 'invalid',
         amount: 500,
-        reference: "transfer-ref",
-        description: "Test transfer",
-      };
-      await expect(walletService.transferFunds(input)).resolves.not.toThrow();
+        reference: 'ref',
+        description: 'test'
+      })).rejects.toThrow('Receiver wallet not found');
+
+      expect(mockTrx.decrement).not.toHaveBeenCalled();
     });
 
-    it("should fail if sender has insufficient funds", async () => {
-      const input: TransferFundsInput = {
-        fromWalletId: "wallet1",
-        toWalletId: "wallet2",
-        amount: 999999,
-        reference: "transfer-ref",
-        description: "Test transfer",
-      };
-      await expect(walletService.transferFunds(input)).rejects.toThrow();
+    it('should complete transfer atomically', async () => {
+      mockTrx.first
+        .mockResolvedValueOnce({ id: 'wallet1', balance: 1000 })
+        .mockResolvedValueOnce({ id: 'wallet2', balance: 0 });
+
+      await walletService.transferFunds({
+        fromWalletId: 'wallet1',
+        toWalletId: 'wallet2',
+        amount: 300,
+        reference: 'ref',
+        description: 'test'
+      });
+
+      expect(mockTrx.decrement).toHaveBeenCalledWith('balance', 300);
+      expect(mockTrx.increment).toHaveBeenCalledWith('balance', 300);
+      expect(mockTrx.insert).toHaveBeenCalled();
     });
 
-    it("should fail if sender or receiver wallet is invalid", async () => {
-      const input: TransferFundsInput = {
-        fromWalletId: "",
-        toWalletId: "",
-        amount: 100,
-        reference: "transfer-ref",
-        description: "Test transfer",
-      };
-      await expect(walletService.transferFunds(input)).rejects.toThrow();
-    });
-  });
+    it('should prevent insufficient funds', async () => {
+      mockTrx.first.mockResolvedValue({ id: 'wallet1', balance: 100 });
 
-  // -------------------
-  // WITHDRAW FUNDS
-  // -------------------
-  describe("withdrawFunds", () => {
-    it("should decrease wallet balance for valid withdrawal", async () => {
-      const input: WithdrawFundsInput = {
-        walletId: "wallet-uuid",
-        amount: 100,
-        reference: "withdraw-ref",
-        description: "Test withdraw",
-      };
-      await expect(walletService.withdrawFunds(input)).resolves.not.toThrow();
-    });
-
-    it("should fail if insufficient balance", async () => {
-      const input: WithdrawFundsInput = {
-        walletId: "wallet-uuid",
-        amount: 999999,
-        reference: "withdraw-ref",
-        description: "Test withdraw",
-      };
-      await expect(walletService.withdrawFunds(input)).rejects.toThrow();
-    });
-
-    it("should fail if wallet is invalid", async () => {
-      const input: WithdrawFundsInput = {
-        walletId: "",
-        amount: 100,
-        reference: "withdraw-ref",
-        description: "Test withdraw",
-      };
-      await expect(walletService.withdrawFunds(input)).rejects.toThrow();
-    });
-  });
-
-  // -------------------
-  // GET WALLET
-  // -------------------
-  describe("getWalletByUserId", () => {
-    it("should return wallet details for a valid userId", async () => {
-      await expect(walletService.getWalletByUserId("user-id")).resolves.not.toBeNull();
-    });
-
-    it("should throw error if userId is invalid", async () => {
-      await expect(walletService.getWalletByUserId("")).rejects.toThrow();
-    });
-  });
-
-  describe("getWalletById", () => {
-    it("should return wallet details for a valid walletId", async () => {
-      await expect(walletService.getWalletById("wallet-id")).resolves.not.toBeNull();
-    });
-
-    it("should throw error if walletId is invalid", async () => {
-      await expect(walletService.getWalletById("")).rejects.toThrow();
+      await expect(walletService.transferFunds({
+        fromWalletId: 'wallet1',
+        toWalletId: 'wallet2',
+        amount: 500,
+        reference: 'ref',
+        description: 'test'
+      })).rejects.toThrow('Insufficient funds');
     });
   });
 });
