@@ -7,8 +7,3 @@ export const CreateUserSchema = z.object({
   phone_number: z.string().min(5, "Phone number is required"),
   password: z.string().min(8, "Minimum of 8 characters required for security")
 });
-
-export const LoginSchema = z.object({
-  email: z.string().email(),
-  password: z.string()
-});
