@@ -1,7 +1,17 @@
 jest.mock('uuid', () => ({ v4: () => 'mock-uuid-123' }));
-jest.mock('bcryptjs', () => ({ hash: jest.fn(() => '$2b$10$hashedpassword') }));
+jest.mock('jsonwebtoken', () => ({
+  sign: jest.fn(() => 'mock-jwt-token'),
+  verify: jest.fn()
+}));
+
+jest.mock('bcryptjs', () => ({
+  hash: jest.fn(() => Promise.resolve('$2b$10$hashedpassword')),
+  compare: jest.fn()
+}));
 
 import { UserService } from '../../src/modules/user/user.service';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 describe('UserService Unit Tests', () => {
   let userService: UserService;
@@ -24,6 +34,7 @@ beforeEach(() => {
   mockDb = jest.fn(() => queryBuilder);
   mockDb.transaction = jest.fn((callback) => callback(mockTrx));
 
+  process.env.JWT_SECRET = 'test-secret';
   userService = new UserService(mockDb as any);
 });
 
@@ -33,6 +44,7 @@ beforeEach(() => {
         id: 'mock-uuid-123',
         email: 'john@test.com',
         first_name: 'John',
+        phone_number: '+2341234567890',
         password: '$2b$10$hashedpassword'
       });
 
@@ -44,6 +56,8 @@ beforeEach(() => {
         password: 'password123'
       });
 
+      expect(bcrypt.hash).toHaveBeenCalledWith('password123', 10);
+      expect(jwt.sign).toHaveBeenCalled();
       expect(mockTrx.insert).toHaveBeenCalledTimes(3); // user, wallet, token
       expect(result.user.email).toBe('john@test.com');
       expect(result.token).toBeDefined();
@@ -63,7 +77,6 @@ beforeEach(() => {
         password: 'password123'
       });
 
-      const bcrypt = require('bcryptjs');
       expect(bcrypt.hash).toHaveBeenCalledWith('password123', 10);
     });
 
