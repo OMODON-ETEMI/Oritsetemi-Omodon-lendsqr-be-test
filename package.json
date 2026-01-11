@@ -4,11 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "tsc",
+    "start": "node dist/app.js",
     "test:unit": "jest --coverage",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "knex": "knex --knexfile src/database/knexfile.ts",
     "test": "jest",
-    "start": "knex migrate:latest --env production && node dist/app.js"
+    "migrate": "knex migrate:latest"
   },
   "keywords": [],
   "author": "",
