@@ -9,7 +9,7 @@ const config: { [key: string]: Knex.Config } = {
       client: "mysql2",
       connection: process.env.DATABASE_URL, // Railway provides this
       migrations: {
-        directory: "./src/database/migrations",
+        directory: "./migrations",
         extension: "js",
       },
     },
