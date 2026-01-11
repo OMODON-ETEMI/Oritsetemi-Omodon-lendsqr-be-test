@@ -6,13 +6,13 @@ dotenv.config();
 
 const config: { [key: string]: Knex.Config } = {
   production: {
-      client: "mysql2",
-      connection: process.env.DATABASE_URL, // Railway provides this
-      migrations: {
-        directory: "./src/database/migrations",
-        extension: "js",
-      },
+    client: "mysql2",
+    connection: process.env.DATABASE_URL,
+    migrations: {
+      directory: "./dist/database/migrations",
+      extension: "js",
     },
+  },
   development: {
     client: 'mysql2',
     connection: {
@@ -23,10 +23,10 @@ const config: { [key: string]: Knex.Config } = {
       database: process.env.DB_NAME,
     },
     migrations: {
-      directory: './migrations',
-      tableName: 'knex_migrations',
+      directory: './src/database/migrations',
+      extension: 'ts',
     },
   },
 };
 
-export default config;
+export default config
