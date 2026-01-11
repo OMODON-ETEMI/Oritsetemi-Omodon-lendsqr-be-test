@@ -1,6 +1,18 @@
+
 import type { Knex } from 'knex';
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const config: { [key: string]: Knex.Config } = {
+  production: {
+      client: "mysql2",
+      connection: process.env.DATABASE_URL, // Railway provides this
+      migrations: {
+        directory: "./src/database/migrations",
+        extension: "ts",
+      },
+    },
   development: {
     client: 'mysql2',
     connection: {
