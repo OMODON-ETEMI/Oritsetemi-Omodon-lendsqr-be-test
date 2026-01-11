@@ -13,7 +13,7 @@ export class UserController {
     register = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const { first_name, last_name, email, phone_number, password } = req.body;
-            const karmaResponse = await fetch(`${process.env.KARMA_API_BASE_URL}:${email || phone_number}`,{
+            const karmaResponse = await fetch(`${process.env.KARMA_API_BASE_URL}/${email || phone_number}`,{
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${process.env.KARMA_API_KEY}`,
