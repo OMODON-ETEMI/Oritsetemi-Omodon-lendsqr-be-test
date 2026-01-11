@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js",
+    "migrate:prod": "knex migrate:latest --knexfile dist/database/knexfile.js --env production",
+    "start": "npm run migrate:prod && node dist/server.js",
     "test:unit": "jest --coverage",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "knex": "knex --knexfile src/database/knexfile.ts",

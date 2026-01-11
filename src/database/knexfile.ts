@@ -10,7 +10,7 @@ const config: { [key: string]: Knex.Config } = {
       connection: process.env.DATABASE_URL, // Railway provides this
       migrations: {
         directory: "./src/database/migrations",
-        extension: "ts",
+        extension: "js",
       },
     },
   development: {
